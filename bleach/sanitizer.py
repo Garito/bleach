@@ -16,6 +16,8 @@ class BleachSanitizerMixin(HTMLSanitizerMixin):
     allowed_svg_properties = []
     # TODO: When the next html5lib version comes out, nuke this.
     attr_val_is_uri = HTMLSanitizerMixin.attr_val_is_uri + ['poster']
+    # Strip mode: controls if the sanitizer is in strip mode
+    striping = False
 
     def sanitize_token(self, token):
         """Sanitize a token either by HTML-encoding or dropping.
@@ -75,27 +77,32 @@ class BleachSanitizerMixin(HTMLSanitizerMixin):
                     token['data'] = [(name, val) for name, val in
                                      attrs.items()]
                 return token
-            elif self.strip_disallowed_elements:
-                pass
             else:
                 if token['type'] == tokenTypes['EndTag']:
+                    # Change the sanitizer mode to non strip
+                    self.striping = False
                     token['data'] = '</%s>' % token['name']
                 elif token['data']:
                     attrs = ''.join([' %s="%s"' % (k, escape(v)) for k, v in
                                     token['data']])
                     token['data'] = '<%s%s>' % (token['name'], attrs)
                 else:
+                    # Change the sanitizer mode to strip
+                    self.striping = True
                     token['data'] = '<%s>' % token['name']
                 if token['selfClosing']:
                     token['data'] = token['data'][:-1] + '/>'
                 token['type'] = tokenTypes['Characters']
                 del token["name"]
-                return token
+                # return the token only if the sanitizer is configured to not strip
+                if not self.strip_disallowed_elements: 
+                    return token
         elif token['type'] == tokenTypes['Comment']:
             if not self.strip_html_comments:
                 return token
         else:
-            return token
+            if not (self.strip_disallowed_elements > 1 and self.striping):
+                return token
 
     def sanitize_css(self, style):
         """HTMLSanitizerMixin.sanitize_css replacement.

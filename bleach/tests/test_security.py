@@ -11,6 +11,36 @@ def test_nested_script_tag():
     eq_('&lt;&lt;x&gt;script&gt;evil()&lt;&lt;/x&gt;/script&gt;',
         clean('<<x>script>evil()<</x>/script>'))
 
+# Test with strip tags mode 1 (don't delete the content of the illegal tag)
+def test_nested_script_tag_strip1():
+    eq_('&lt;script&gt;evil()&lt;/script&gt;',
+        clean('<<script>script>evil()<</script>/script>', strip = 1))
+    eq_('&lt;script&gt;evil()&lt;/script&gt;',
+        clean('<<x>script>evil()<</x>/script>', strip = 1))
+
+# Test with strip tags mode 2 (delete the content of the illegal tag)
+def test_nested_script_tag_strip2():
+    eq_('&lt;/script&gt;',
+        clean('<<script>script>evil()<</script>/script>', strip = 2))
+    eq_('&lt;/script&gt;',
+        clean('<<x>script>evil()<</x>/script>', strip = 2))
+
+# Test case suggested here: https://github.com/jsocol/bleach/pull/57
+# Without striping
+def test_suggested_on_github_without_strip1():
+    eq_('<p>Some random text &lt;script&gt;function with_a_(script) { alert("tag &lt;script&gt; inside a js string"); }&lt;/script&gt; without cutting away the after-script-tag text</p>',
+        clean('<p>Some random text <script>function with_a_(script) { alert("tag <script> inside a js string"); }</script> without cutting away the after-script-tag text</p>', ('p')))
+
+# Strip mode 1
+def test_suggested_on_github_without_strip1():
+    eq_('<p>Some random text function with_a_(script) { alert("tag  inside a js string"); } without cutting away the after-script-tag text</p>',
+        clean('<p>Some random text <script>function with_a_(script) { alert("tag <script> inside a js string"); }</script> without cutting away the after-script-tag text</p>', ('p'), strip = 1))
+
+# Strip mode 2
+def test_suggested_on_github_without_strip1():
+    eq_('<p>Some random text  without cutting away the after-script-tag text</p>',
+        clean('<p>Some random text <script>function with_a_(script) { alert("tag <script> inside a js string"); }</script> without cutting away the after-script-tag text</p>', ('p'), strip = 2))
+
 
 def test_nested_script_tag_r():
     eq_('&lt;script&lt;script&gt;&gt;evil()&lt;/script&lt;&gt;&gt;',
